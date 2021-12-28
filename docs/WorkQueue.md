@@ -111,3 +111,18 @@ reader = tf.TableRecordReader()
 keys, values = reader.read_up_to(work_queue.input_producer(), num_records=2)
 ```
 
+## 用户常见问题
+### 1.分布式场景下chief可以读到数据，worker读不到数据
+检查graph workqueue节点的device信息是否有worker的信息，如果没有需要在workqueue前配置device信息
+```python
+from tensorflow.python.ops.work_queue import WorkQueue
+
+cluster = tf.train.ClusterSpec({"ps": ps_hosts, "worker": worker_hosts})
+with tf.train.device(tf.train.replica_device_setter(cluster=cluster)):
+    training_util.get_or_create_global_step()
+    work_queue = WorkQueue([b"fast", b"fox", b"jumps", b"over", b"lazy", b"dog"], num_epochs=3, shuffle=False, name='global_queue')
+    local_queue = work_queue.input_producer()
+    read_op = local_queue.dequeue()
+    ....
+```
+
